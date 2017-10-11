@@ -1,8 +1,9 @@
-#teamEM<-function(data, epilson=1e-08, maxit=1000){
+#teamEM<-function(data, episilon=1e-08, maxit=1000){
 #data<-c(1,2,3,3,3,4,5,6,7,7,8,9)
+
 #Initialisation:
 #maxit<-50
-likelihood_vector<-rep(0,times=maxit)
+likelihood<-rep(0,times=maxit)
 posterior<-rep(0,times=length(data)*3)
 #(structure: for each xi: P(xi belongs in k=1), P(xi belongs in k=2),which k? (integer 1 or 2))
 data_sorted<-sort(data,decreasing = FALSE)
@@ -29,6 +30,7 @@ if(x%%2==0){
   }#The posterior vector now has the value 1 or 2 at every third position.
 }
 print(posterior)
+
 #Calculating means:
 sum_mu1<-0
 sum_mu2<-0
@@ -54,11 +56,28 @@ mu2<-sum_mu2/sum(posterior==2)
 sd1<-sd(data1)
 sd2<-sd(data2)
 
-lamda1<-length(data1)/x#Did I understand the formula correctly?
-lamda2<-length(data2)/x
-count<-0
+lambda1<-length(data1)/x#Did I understand the formula correctly?
+lambda2<-length(data2)/x
+count<-1
 converged<-FALSE
 
+##------Maki--------##
+#Create inits: list of initial values used for mu, sigma and lambda  
+
+ mu <- c(mu1,mu2)
+ sigma <- c(sd1,sd2)
+ lambda <- c(lambda1,lambda2)
+
+ inits <- c(mu,sigma,lambda)
+
+#estimates: list of mu, sigma (standard deviation, not variance), and lambda)
+### I'm not sure why we need estimates...
+
+if(count == 1){ 
+  estimates <- inits
+  }
+##----end Maki-----##
+ 
 
 #while(converged==FALSE){
 #adding conditional probabilities to posterior
@@ -111,7 +130,37 @@ for(i in seq(1,length(posterior),by=3)){
 sd1<-sqrt(Sum1/sum1)
 sd2<-sqrt(Sum2/sum2)
 
-#Calculate lamda
-lamda1<-(1/x)*sum1
-lamda2<-(1/x)*sum2
+#Calculate lambda
+lambda1<-(1/x)*sum1
+lambda2<-(1/x)*sum2
 
+##------Maki2-------##
+#Calculating likelihood:
+
+# Function to calculate log of likelihood and return scalar
+ # change to use estimate_vector
+
+mu <- c(mu1,mu2)
+sigma <- c(sd1,sd2)
+lambda <- c(lambda1,lambda2)
+
+ likelihoodF <- function(x,mu,sigma,lambda){
+   sum(log(lambda[1]*dnorm(x,mu[1],sigma[1]) + lambda[2]*dnorm(x,mu[2],sigma[2])))
+ }
+
+# Update (log)likelihood vector with the scalar
+ likelihood[count] <- likelihoodF(x, mu, sigma, lambda)
+   
+# Stop-function rule (update converged)
+###can the break stop the while loop??
+###need return??
+
+  if(abs(likelihood[count] - likelihood[count-1]) < episilon){
+    converged <- TRUE
+   }else{
+    converged <- FALSE
+    count <- count + 1
+    if (count > maxit) break
+   }
+
+##------End Maki2-------##
